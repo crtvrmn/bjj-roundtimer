@@ -1,0 +1,101 @@
+body {
+    font-family: sans-serif;
+    text-align: center;
+    /* Hintergrundfarbe für bessere Lesbarkeit */
+    background-color: #3498db; /* Ein hellgrauer Hintergrund */
+    color: #333; /* Dunklere Textfarbe */
+}
+
+#time {
+    font-size: 5em; /* Größere Schrift */
+    margin-bottom: 15px;
+    color: #2c3e50; /* Dunkelblaue Farbe für die Zeit */
+}
+
+#matches {
+    white-space: pre-line;
+    font-size: 2em; /* Etwas größere Schrift für die Matches */
+    color: #e0e0e0; /* Etwas hellere Farbe für die Matches */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Optional: Schatten für noch bessere Lesbarkeit */
+    line-height: 3em;
+}
+
+#pause {
+    /* Deutlich größere und besser lesbare Schrift */
+    font-size: 1.5em;
+    font-weight: bold; /* Fettere Schrift */
+    color: #447d9c; /* Eine auffällige Farbe wie Rot */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Optional: Schatten für noch bessere Lesbarkeit */
+    margin-top: auto;
+    margin-bottom: 10%;
+}
+
+body {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    /* Flexbox für die Anordnung der Elemente */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Mindesthöhe des Viewports */
+}
+
+
+
+#start,
+#stop,
+#submit,
+#submit_config {
+    font-size: 2em;
+    padding: 15px 30px;
+    margin: 5px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    /* Buttons füllen die Breite */
+ 
+    box-sizing: border-box; /* Padding und Border werden zur Breite hinzugefügt */
+    margin-top: auto;
+    margin-bottom: 10%;
+
+ 
+}
+
+#start {
+    background-color: #2ecc71; /* Grün */
+    color: white;
+}
+#submit, #submit_config{
+    background-color: #c0bbbb; 
+    color: rgb(0, 0, 0);
+}
+#stop {
+    background-color: #e74c3c; /* Rot */
+    color: white;
+}
+
+.round-running {
+    background-color: #27ae60; /* Dunkleres Grün */
+}
+
+.pause-running {
+    background-color: #3498db; /* Blau */
+}
+
+.paused {
+    background-color: #f39c12; /* Orange */
+}
+
+.hidden {
+    display: none;
+}
+
+#edit-logo {
+    position: absolute; /* Absolute Positionierung */
+    top: 20px; /* Oben links */
+    left: 20px;
+    font-size: 2em;
+    cursor: pointer;
+    color: #888;
+}
+

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BJJ Round Timer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+    <!--<script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-LcKuhUfJGzZn2uFQzhzcTCuCRdQvjmaZFnbiV6NLcgvHn/7ibP8mRnlxUixwQWtu" crossorigin="anonymous"></script> -->
+</head>
+<body>
+    
+    <div id="round"></div>
+    <div id="time"></div>
+    <div id="matches"></div>
+    <div id="pause"></div>
+
+    <button id="start" class="hidden">Start</button>
+    <button id="stop" class="hidden">Stop</button>
+
+
+
+    <form id="user-form">
+        <h1>BJJ Round Timer</h1>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username"><br><br>
+        <label for="session-id">Session-ID:</label>
+        <input type="text" id="session-id" name="sessionId"><br><br>
+        <button id="submit" type="submit">Join Session</button>
+    </form>
+
+    <form id="config-form" class="hidden">
+        <label for="round-time">Rundenzeit (Sekunden):</label>
+        <input type="number" id="round-time" name="roundTime"><br><br>
+      
+        <label for="pause-time">Pausenzeit (Sekunden):</label>
+        <input type="number" id="pause-time" name="pauseTime"><br><br>
+      
+        <label for="combatants">Kämpfer (JSON):</label>
+        <textarea id="combatants" name="combatants"></textarea><br><br>
+
+
+      
+        <button id="submit_config" type="submit">Konfiguration speichern</button>
+    </form>
+    <div id="edit-logo">
+        ⚙️
+      </div>
+    <script src="script.js"></script>
+</body>
+</html>
