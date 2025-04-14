@@ -1,46 +1,40 @@
 body {
     font-family: sans-serif;
     text-align: center;
-    /* Hintergrundfarbe für bessere Lesbarkeit */
-    background-color: #3498db; /* Ein hellgrauer Hintergrund */
-    color: #333; /* Dunklere Textfarbe */
+    background-color: #3498db;
+    color: #333;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    /* Verteilt den verfügbaren Platz gleichmäßig */
+    justify-content: flex-start; /* Inhalt oben ausrichten */
 }
 
 #time {
-    font-size: 5em; /* Größere Schrift */
+    font-size: 5em;
     margin-bottom: 15px;
-    color: #2c3e50; /* Dunkelblaue Farbe für die Zeit */
+    color: #2c3e50;
 }
 
 #matches {
     white-space: pre-line;
-    font-size: 2em; /* Etwas größere Schrift für die Matches */
-    color: #e0e0e0; /* Etwas hellere Farbe für die Matches */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Optional: Schatten für noch bessere Lesbarkeit */
+    font-size: 2em;
+    color: #e0e0e0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
     line-height: 3em;
 }
 
 #pause {
-    /* Deutlich größere und besser lesbare Schrift */
     font-size: 1.5em;
-    font-weight: bold; /* Fettere Schrift */
-    color: #447d9c; /* Eine auffällige Farbe wie Rot */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* Optional: Schatten für noch bessere Lesbarkeit */
-    margin-top: auto;
+    font-weight: bold;
+    color: #447d9c;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    /*margin-top: auto;  Entfernt*/
     margin-bottom: 10%;
 }
-
-body {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    /* Flexbox für die Anordnung der Elemente */
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Mindesthöhe des Viewports */
-}
-
-
 
 #start,
 #stop,
@@ -52,38 +46,37 @@ body {
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    /* Buttons füllen die Breite */
- 
-    box-sizing: border-box; /* Padding und Border werden zur Breite hinzugefügt */
-    margin-top: auto;
-    margin-bottom: 10%;
-
- 
+    box-sizing: border-box;
+    /*margin-top: auto; Entfernt*/
+    margin-bottom: 10px; /* Reduziert den Abstand unten */
 }
 
 #start {
-    background-color: #2ecc71; /* Grün */
+    background-color: #2ecc71;
     color: white;
 }
-#submit, #submit_config{
-    background-color: #c0bbbb; 
+
+#submit,
+#submit_config {
+    background-color: #c0bbbb;
     color: rgb(0, 0, 0);
 }
+
 #stop {
-    background-color: #e74c3c; /* Rot */
+    background-color: #e74c3c;
     color: white;
 }
 
 .round-running {
-    background-color: #27ae60; /* Dunkleres Grün */
+    background-color: #27ae60;
 }
 
 .pause-running {
-    background-color: #3498db; /* Blau */
+    background-color: #3498db;
 }
 
 .paused {
-    background-color: #f39c12; /* Orange */
+    background-color: #f39c12;
 }
 
 .hidden {
@@ -91,11 +84,88 @@ body {
 }
 
 #edit-logo {
-    position: absolute; /* Absolute Positionierung */
-    top: 20px; /* Oben links */
+    position: absolute;
+    top: 20px;
     left: 20px;
     font-size: 2em;
     cursor: pointer;
     color: #888;
 }
 
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: none;
+    border-bottom: 2px solid black;
+    background-color: transparent;
+    color: #555;
+    font-size: 1em;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+    outline: none;
+    border-bottom-color: #2c3e50;
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #555;
+    font-weight: bold;
+}
+
+form {
+    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+/* Media Query für kleinere Bildschirme */
+@media (max-width: 600px) {
+    body {
+        padding: 10px; /* Weniger Padding auf kleinen Bildschirmen */
+    }
+
+    #time {
+        font-size: 3em; /* Kleinere Schriftgröße für die Zeit */
+    }
+
+    #matches {
+        font-size: 1.5em; /* Kleinere Schriftgröße für die Matches */
+        line-height: 2em;
+    }
+
+    #pause {
+        font-size: 1em; /* Kleinere Schriftgröße für die Pause */
+        margin-bottom: 5%; /* Noch weniger Abstand unten */
+    }
+
+    #start,
+    #stop,
+    #submit,
+    #submit_config {
+        font-size: 1.5em; /* Kleinere Schriftgröße für die Buttons */
+        padding: 10px 20px;
+        margin-bottom: 5px; /* Noch weniger Abstand unten bei den Buttons */
+    }
+
+    form {
+        padding: 10px; /* Weniger Padding in den Formularen */
+        margin-bottom: 10px;
+    }
+}
