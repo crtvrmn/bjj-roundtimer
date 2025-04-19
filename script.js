@@ -1,7 +1,7 @@
 
 
 let socket;
-const  SOCKET_SERVER_URL=  "http://192.168.178.113:3001";
+const  SOCKET_SERVER_URL=  "http://localhost:3001";
 const roundElem = document.getElementById('round');
 const timeElem = document.getElementById('time');
 const matchesElem = document.getElementById('matches');

@@ -1,5 +1,5 @@
 
-const FRONTEND_URL = "http://192.168.178.113:3000";
+const FRONTEND_URL = "*";
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -283,6 +283,6 @@ io.on('connection', (socket) => {
         });
     });
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
 });
