@@ -1,7 +1,6 @@
-
-
 let socket;
-const  SOCKET_SERVER_URL=  "http://localhost:3001";
+//const  SOCKET_SERVER_URL= https://socket.theboilerroom.de 
+const SOCKET_SERVER_URL = "http://localhost:3001";
 const roundElem = document.getElementById('round');
 const timeElem = document.getElementById('time');
 const matchesElem = document.getElementById('matches');
@@ -17,10 +16,9 @@ const editLogo = document.getElementById('edit-logo');
 //document.getElementById('session-id').value = sessionId;
 
 window.onload = () => {
-    
     const userForm = document.getElementById('user-form');
     const configForm = document.getElementById('config-form');
-    
+
     userForm.addEventListener('submit', (event) => {
         event.preventDefault();
 
@@ -45,8 +43,36 @@ window.onload = () => {
             document.getElementById('pause-time').value = data.pauseTime;
             config = data;
 
-            userForm.classList.add('hidden'); 
-            startButton.classList.remove('hidden');
+            userForm.classList.add('hidden');
+
+        });
+
+        const sound3 = new Audio('sounds/23.mp3');
+        const sound2 = new Audio('sounds/23.mp3');
+        const sound1 = new Audio('sounds/1.mp3');
+        const combatSound = new Audio('sounds/combat.mp3');
+        //  const soundPause = new Audio('path/to/soundPause.mp3');
+
+        socket.on('playSound', (second) => {
+            console.log(`playSound Event erhalten, Sekunde: ${second}`);
+            switch (second) {
+                case "combat":
+                    combatSound.play()
+                        .catch(error => console.error('Fehler beim Abspielen von CombatSound:', error));
+                    break;
+                case 3:
+                    sound3.play()
+                        .catch(error => console.error('Fehler beim Abspielen von Sound 3:', error));
+                    break;
+                case 2:
+                    sound2.play()
+                        .catch(error => console.error('Fehler beim Abspielen von Sound 2:', error));
+                    break;
+                case 1:
+                    sound1.play()
+                        .catch(error => console.error('Fehler beim Abspielen von Sound 1:', error));
+                    break;
+            }
         });
 
         socket.on('configUpdated', (newConfig) => {
@@ -66,7 +92,7 @@ window.onload = () => {
         });
 
         socket.on('pauseTimeUpdate', (time) => {
-            timeElem.textContent = `PAUSE (${time})`;
+            timeElem.textContent = `PAUSE \n${time}`;
             document.body.className = 'pause-running';
         });
 
@@ -74,46 +100,34 @@ window.onload = () => {
             console.log('Received initialData:', data);
             roundElem.textContent = `Round ${data.round}`;
             matchesElem.textContent = data.matches;
-            pauseElem.textContent = `PAUSE ${data.pause}`;
-
+            pauseElem.textContent = data.pause ? `⏱️ ${data.pause}` : "";
+            console.log(data.pause)
             // Show pairings for the next round
             matchesElem.textContent = `${data.matches.matches}`;
+
         });
-         socket.on('timerStarted', (username) => {
-            startTimer();
-            document.body.className = 'round-running';
-            startButton.classList.add('hidden'); // Start Button verstecken
-            stopButton.classList.remove('hidden'); // Stop Button anzeigen
-     
+        socket.on('timerStarted', (username) => {
         });
-         socket.on('timerStopped', (username) => {
-            stopTimer();
-            document.body.className = 'paused';
-            startButton.classList.remove('hidden'); // Start Button anzeigen
-            stopButton.classList.add('hidden'); // Stop Button verstecken
+        socket.on('timerStopped', (username) => {
+
 
         });
 
-        let timerInterval;
-
-        function startTimer() {
-            if (!timerInterval) {
-                timerInterval = setInterval(() => {
-                    let currentTime = config.roundTime;
-                    if (currentTime > 0) {
-                        timeElem.textContent = currentTime - 1;
-                        config.roundTime = currentTime - 1;
-                    } else {
-                        clearInterval(timerInterval);
-                    }
-                }, 1000);
+        socket.on('timerStatus', (isTimerRunning) => {
+            startButton.classList.add('hidden');
+            stopButton.classList.add('hidden');
+            if (isTimerRunning) {
+                console.log("Round is Running!")
+                document.body.className = 'round-running';
+                startButton.classList.add('hidden');
+                stopButton.classList.remove('hidden');
+            } else {
+                console.log("Round is paused.")
+                document.body.className = 'paused';
+                startButton.classList.remove('hidden');
+                stopButton.classList.add('hidden');
             }
-        }
-
-        function stopTimer() {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
+        });
     });
 
     startButton.addEventListener('click', () => {
@@ -156,14 +170,15 @@ window.onload = () => {
         socket.emit('updateConfig', {
             roundTime: roundTime,
             pauseTime: pauseTime,
-            combatants: combatants,
+            combatants: combatants, //update the round-robin!
             sessionId: sessionId
         });
         configForm.classList.add('hidden'); //hide
     });
 
-       // Event Listener für das Edit-Logo
-       editLogo.addEventListener('click', () => {
+    // Event Listener für das Edit-Logo
+    editLogo.addEventListener('click', () => {
+        socket.emit('stopTimer');
         configForm.classList.remove('hidden'); // Entferne die 'hidden' Klasse, um das Formular anzuzeigen
     });
 };

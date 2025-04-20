@@ -15,12 +15,13 @@ const io = new Server(server, {
     }
 });
 
-// Session-Daten speichern (in-memory)
 const sessions = {};
+let sessionId = 0
+globalThis.configFilename = `config-${sessionId}.json`;
+let isTimerRunning = false;
 
-// Funktion zum Laden der Konfiguration für eine Session
 function loadConfig(sessionId) {
-    const configFilename = `config-${sessionId}.json`;
+
     try {
         const config = JSON.parse(fs.readFileSync(configFilename, 'utf-8'));
         return {
@@ -31,13 +32,11 @@ function loadConfig(sessionId) {
         };
     } catch (error) {
         console.error(`Error loading ${configFilename}:`, error);
-        // Wenn die Session-Konfiguration nicht gefunden wird, erstelle eine Standardkonfiguration
         const defaultConfig = {
             roundTime: 300,
             pauseTime: 60,
             combatants: {}
         };
-        // Schreibe die Standardkonfiguration in die Datei
         try {
             fs.writeFileSync(configFilename, JSON.stringify(defaultConfig, null, 2), 'utf-8');
             console.log(`Created default configuration for session ${sessionId} in ${configFilename}`);
@@ -49,7 +48,6 @@ function loadConfig(sessionId) {
             };
         } catch (writeError) {
             console.error(`Error writing default configuration to ${configFilename}:`, writeError);
-            // Wenn auch das Schreiben der Datei fehlschlägt, verwende Fallback-Werte
             return {
                 roundTime: 300,
                 pauseTime: 60,
@@ -60,10 +58,7 @@ function loadConfig(sessionId) {
     }
 }
 
-// Funktion zum Speichern der Konfiguration für eine Session (optional, für persistente Speicherung)
 function saveConfig(sessionId, config) {
-    const configFilename = `config-${sessionId}.json`;
-    // Stelle sicher, dass roundTime und pauseTime als Ganzzahlen gespeichert werden
     if (config.roundTime !== undefined) {
         config.roundTime = parseInt(config.roundTime, 10);
     }
@@ -85,17 +80,17 @@ function roundRobinPairing(combatants, round, username) {
     if (numCombatants % 2 !== 0) {
         combatantList.push("PAUSE");
     }
-    
+
     // Rotate the combatant list based on the round number
     const rotatedList = rotateList(combatantList, round);
-    
+
     let roundPairs = [];
-    let userIsInMatch = false; // Flag, um zu überprüfen, ob der Benutzer Teil des Matchups ist
+    let userIsInMatch = false;
     for (let i = 0; i < rotatedList.length / 2; i++) {
         const fighter1 = rotatedList[i];
         const fighter2 = rotatedList[rotatedList.length - 1 - i];
         roundPairs.push(`${fighter1} : ${fighter2}`);
-        // Überprüfe, ob der Benutzer Teil des Matchups ist
+
         if (fighter1 === username || fighter2 === username) {
             userIsInMatch = true;
         }
@@ -114,14 +109,14 @@ function roundRobinPairing(combatants, round, username) {
         matches: match_list,
         pause: on_pause,
         rotatedList: rotatedList,
-        userIsInMatch: userIsInMatch // Gib das Flag zurück
+        userIsInMatch: userIsInMatch
     };
 }
 
-function rotateList(list, round) {
-    if (list.length <= 1) return list; // Keine Rotation bei 0 oder 1 Element
-    const firstElement = list[0];
-    const rest = list.slice(1);
+function rotateList(combatant_list, round) {
+    if (combatant_list.length <= 1) return combatant_list;
+    const firstElement = combatant_list[0];
+    const rest = combatant_list.slice(1);
     const rotation = round % rest.length;
     const rotatedRest = [...rest.slice(rotation), ...rest.slice(0, rotation)];
     return [firstElement, ...rotatedRest];
@@ -136,58 +131,75 @@ function doingPause(entry) {
 }
 
 function advanceRound(sessionId) {
-    sessions[sessionId].round++;
-    let currentMatches = roundRobinPairing(sessions[sessionId].combatants, sessions[sessionId].round);
-    io.to(sessionId).emit('roundUpdate', { round: sessions[sessionId].round, matches: currentMatches , pause: currentMatches.pause}); // Send update to all clients in the session
-    console.log(`Session ${sessionId} roundUpdate: Round ${sessions[sessionId].round}, \nmatches: ${currentMatches.matches}`);
+    const session = sessions[sessionId]; // Hole die Session-Daten
+
+    if (!session) {
+        console.error(`Session ${sessionId} not found in advanceRound.`);
+        return;
+    }
+
+    session.round++;
+    let currentMatches = roundRobinPairing(session.combatants, session.round);
+    console.log(`Session ${sessionId} roundUpdate: Round ${session.round}, \nmatches: ${currentMatches.matches}`);
+    io.to(sessionId).emit('roundUpdate', { round: session.round, matches: currentMatches, pause: currentMatches.pause }); // Send update to all clients in the session
+
+    // Reset round and pause times
+    session.roundTime = typeof session.config.roundTime === 'number' && session.config.roundTime > 0
+        ? session.config.roundTime
+        : 300; // Default to 300 if invalid
+
+    session.pauseTime = typeof session.config.pauseTime === 'number' && session.config.pauseTime > 0
+        ? session.config.pauseTime
+        : 60; // Default to 60 if invalid
+    // Restart timer for the next round
+
 }
 
 function updateTime(sessionId) {
     const session = sessions[sessionId];
-
     if (!session) {
         console.error(`Session ${sessionId} not found.`);
         return;
     }
 
     if (session.roundTime > 0) {
+        io.to(sessionId).emit('roundTimeUpdate', session.roundTime);
+        console.log(session.roundTime)
+        if (session.roundTime === session.config.roundTime) {
+            io.to(sessionId).emit('playSound', "combat");
+        }
+        if (session.roundTime <= 3) {
+            io.to(sessionId).emit('playSound', session.roundTime);
+        }
         session.roundTime--;
-        io.to(sessionId).emit('roundTimeUpdate', session.roundTime); // Send time to all clients in the session
-    } else if (session.pauseTime > 0) {
+    } else if (session.pauseTime > 1) {
+        console.log(session.pauseTime)
+        io.to(sessionId).emit('pauseTimeUpdate', session.pauseTime);
+
         if (session.pauseTime === session.config.pauseTime) {
             // Berechne und sende die Matches der nächsten Runde zu Beginn der Pause
             const nextRoundMatches = roundRobinPairing(session.combatants, session.round + 1);
             console.log(nextRoundMatches)
-            io.to(sessionId).emit('roundUpdate', { round: session.round + 1, matches: nextRoundMatches , pause: nextRoundMatches.pause });
+            io.to(sessionId).emit('roundUpdate', { round: session.round + 1, matches: nextRoundMatches, pause: nextRoundMatches.pause });
             console.log(`Session ${sessionId} Comming Up Next: Round ${session.round + 1}, \nmatches: ${nextRoundMatches.matches}`);
         }
         session.pauseTime--;
-        io.to(sessionId).emit('pauseTimeUpdate', session.pauseTime); // Send time to all clients in the session
+
     } else {
-        clearInterval(session.timerInterval);
+
+        console.log(session.pauseTime)
+        io.to(sessionId).emit('pauseTimeUpdate', session.pauseTime);
         console.log(`Round ${session.round} over for session ${sessionId}, advancing to round ${session.round + 1}`);
+        session.pauseTime--;
         advanceRound(sessionId);
 
-        // Reset round and pause times
-        session.roundTime = typeof session.config.roundTime === 'number' && session.config.roundTime > 0
-            ? session.config.roundTime
-            : 300; // Default to 300 if invalid
-
-        session.pauseTime = typeof session.config.pauseTime === 'number' && session.config.pauseTime > 0
-            ? session.config.pauseTime
-            : 60; // Default to 60 if invalid
-
-        io.to(sessionId).emit('roundTimeUpdate', session.roundTime);
-        io.to(sessionId).emit('pauseTimeUpdate', session.pauseTime);
-
-        // Restart timer for the next round
-        session.timerInterval = setInterval(() => updateTime(sessionId), 1000);
     }
 }
 
 io.on('connection', (socket) => {
     const sessionId = socket.handshake.query.sessionId;
     const username = socket.handshake.query.username;
+
 
     if (!sessionId) {
         console.error('No session ID provided');
@@ -202,6 +214,8 @@ io.on('connection', (socket) => {
     }
 
     socket.join(sessionId); // Füge den Socket dem Raum hinzu
+    io.to(sessionId).emit('timerStatus', isTimerRunning)
+    console.log(`Timer Running is currently: ${isTimerRunning}`)
     console.log(`User ${username} connected to session ${sessionId}` + (sessions[sessionId] ? `,(roundTime: ${sessions[sessionId].roundTime} seconds, pauseTime: ${sessions[sessionId].pauseTime} seconds)` : ``));
 
     // Session-Daten initialisieren, falls noch nicht vorhanden
@@ -225,12 +239,9 @@ io.on('connection', (socket) => {
         sessions[sessionId].combatants[newCombatantId] = username;
     }
 
-
-
-
     // Initial matches berechnen
     let currentMatches = roundRobinPairing(sessions[sessionId].combatants, sessions[sessionId].round, username);
-    console.log(` -> Current combatants: ${JSON.stringify(sessions[sessionId].combatants)}`)
+    console.log(` -> ${username} joined combatants: ${JSON.stringify(sessions[sessionId].combatants)}`)
     // Sende die aktualisierten Daten an alle Clients in der Session
     io.to(sessionId).emit('initialData', {
         roundTime: sessions[sessionId].roundTime,
@@ -238,8 +249,9 @@ io.on('connection', (socket) => {
         matches: currentMatches,
         userIsInMatch: currentMatches.userIsInMatch, // Sende das Flag mit
         combatants: sessions[sessionId].combatants, // Sende die aktualisierte Kämpferliste mit
-        pauseTime: sessions[sessionId].pauseTime
-    }); 
+        pauseTime: sessions[sessionId].pauseTime,
+    });
+
 
     socket.on('startTimer', () => {
         console.log(`Received startTimer event from session ${sessionId} from user ${username}`);
@@ -247,6 +259,10 @@ io.on('connection', (socket) => {
             sessions[sessionId].timerInterval = setInterval(() => updateTime(sessionId), 1000);
         }
         io.to(sessionId).emit('timerStarted', username);
+
+        isTimerRunning = true;
+
+        io.to(sessionId).emit('timerStatus', isTimerRunning)
     });
 
     socket.on('stopTimer', () => {
@@ -255,8 +271,14 @@ io.on('connection', (socket) => {
             clearInterval(sessions[sessionId].timerInterval);
             sessions[sessionId].timerInterval = null;
             io.to(sessionId).emit('timerStopped', username);
+
+            isTimerRunning = false;
+
+            io.to(sessionId).emit('timerStatus', isTimerRunning)
         }
     });
+
+
 
     socket.on('updateConfig', (data) => {
         const { sessionId, roundTime, pauseTime, combatants } = data;
@@ -269,19 +291,18 @@ io.on('connection', (socket) => {
                 pauseTime: pauseTime,
                 combatants: JSON.parse(combatants)
             };
-            
-            sessions[sessionId].roundTime = roundTime;
-            sessions[sessionId].pauseTime = pauseTime;
+
+            sessions[sessionId].roundTime = parseInt(roundTime);
+            sessions[sessionId].pauseTime = parseInt(pauseTime);
             sessions[sessionId].combatants = JSON.parse(combatants);
 
             saveConfig(sessionId, sessions[sessionId].config);
-
             io.to(sessionId).emit('configUpdated', sessions[sessionId].config);
         } else {
             console.error(`Session ${sessionId} not found`);
         }
-        });
     });
+});
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
