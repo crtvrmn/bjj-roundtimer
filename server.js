@@ -1,10 +1,8 @@
-
 const FRONTEND_URL = "*";
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const fs = require('fs');
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -14,14 +12,12 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-
 const sessions = {};
 let sessionId = 0
 globalThis.configFilename = `config-${sessionId}.json`;
 let isTimerRunning = false;
 
 function loadConfig(sessionId) {
-
     try {
         const config = JSON.parse(fs.readFileSync(configFilename, 'utf-8'));
         return {
@@ -80,17 +76,14 @@ function roundRobinPairing(combatants, round, username) {
     if (numCombatants % 2 !== 0) {
         combatantList.push("PAUSE");
     }
-
     // Rotate the combatant list based on the round number
     const rotatedList = rotateList(combatantList, round);
-
     let roundPairs = [];
     let userIsInMatch = false;
     for (let i = 0; i < rotatedList.length / 2; i++) {
         const fighter1 = rotatedList[i];
         const fighter2 = rotatedList[rotatedList.length - 1 - i];
         roundPairs.push(`${fighter1} : ${fighter2}`);
-
         if (fighter1 === username || fighter2 === username) {
             userIsInMatch = true;
         }
@@ -104,7 +97,6 @@ function roundRobinPairing(combatants, round, username) {
             on_pause = doingPause(entry);
         }
     });
-
     return {
         matches: match_list,
         pause: on_pause,
@@ -132,27 +124,22 @@ function doingPause(entry) {
 
 function advanceRound(sessionId) {
     const session = sessions[sessionId]; // Hole die Session-Daten
-
     if (!session) {
         console.error(`Session ${sessionId} not found in advanceRound.`);
         return;
     }
-
     session.round++;
     let currentMatches = roundRobinPairing(session.combatants, session.round);
     console.log(`Session ${sessionId} roundUpdate: Round ${session.round}, \nmatches: ${currentMatches.matches}`);
     io.to(sessionId).emit('roundUpdate', { round: session.round, matches: currentMatches, pause: currentMatches.pause }); // Send update to all clients in the session
-
     // Reset round and pause times
     session.roundTime = typeof session.config.roundTime === 'number' && session.config.roundTime > 0
         ? session.config.roundTime
         : 300; // Default to 300 if invalid
-
     session.pauseTime = typeof session.config.pauseTime === 'number' && session.config.pauseTime > 0
         ? session.config.pauseTime
         : 60; // Default to 60 if invalid
     // Restart timer for the next round
-
 }
 
 function updateTime(sessionId) {
@@ -162,15 +149,24 @@ function updateTime(sessionId) {
         return;
     }
 
+    if (Object.keys(session.users).length === 0) {
+        console.log(`No users connected to session ${sessionId}, stopping timer.`);
+        stopTimer(sessionId);
+        return;
+    }
+
     if (session.roundTime > 0) {
         io.to(sessionId).emit('roundTimeUpdate', session.roundTime);
         console.log(session.roundTime)
+
         if (session.roundTime === session.config.roundTime) {
             io.to(sessionId).emit('playSound', "combat");
         }
+
         if (session.roundTime <= 3) {
             io.to(sessionId).emit('playSound', session.roundTime);
         }
+
         session.roundTime--;
     } else if (session.pauseTime > 1) {
         console.log(session.pauseTime)
@@ -184,29 +180,46 @@ function updateTime(sessionId) {
             console.log(`Session ${sessionId} Comming Up Next: Round ${session.round + 1}, \nmatches: ${nextRoundMatches.matches}`);
         }
         session.pauseTime--;
-
     } else {
-
         console.log(session.pauseTime)
         io.to(sessionId).emit('pauseTimeUpdate', session.pauseTime);
         console.log(`Round ${session.round} over for session ${sessionId}, advancing to round ${session.round + 1}`);
         session.pauseTime--;
         advanceRound(sessionId);
+    }
+}
 
+function stopTimer(sessionId) {
+    const session = sessions[sessionId];
+    if (session && session.timerInterval) {
+        clearInterval(session.timerInterval);
+        session.timerInterval = null;
+        io.to(sessionId).emit('timerStopped', 'server'); // Informiere Clients, dass der Server den Timer gestoppt hat
+        isTimerRunning = false;
+        io.to(sessionId).emit('timerStatus', isTimerRunning);
+        console.log(`Timer stopped for session ${sessionId} due to no connected users.`);
     }
 }
 
 io.on('connection', (socket) => {
     const sessionId = socket.handshake.query.sessionId;
     const username = socket.handshake.query.username;
+    const userAgentDataString = socket.handshake.query.userAgentData; // User-Agent-Daten als String
+    let userAgentData = null;
 
+    if (userAgentDataString) {
+        try {
+            userAgentData = JSON.parse(userAgentDataString); // Versuche, den String in ein JSON-Objekt zu parsen
+        } catch (error) {
+            console.error('Fehler beim Parsen der User-Agent-Daten:', error);
+        }
+    }
 
     if (!sessionId) {
         console.error('No session ID provided');
         socket.disconnect(true); // Trenne die Verbindung
         return;
     }
-
     if (!username) {
         console.error('No username provided');
         socket.disconnect(true); // Trenne die Verbindung
@@ -216,7 +229,7 @@ io.on('connection', (socket) => {
     socket.join(sessionId); // Füge den Socket dem Raum hinzu
     io.to(sessionId).emit('timerStatus', isTimerRunning)
     console.log(`Timer Running is currently: ${isTimerRunning}`)
-    console.log(`User ${username} connected to session ${sessionId}` + (sessions[sessionId] ? `,(roundTime: ${sessions[sessionId].roundTime} seconds, pauseTime: ${sessions[sessionId].pauseTime} seconds)` : ``));
+    console.log(`User ${username} connected to session ${sessionId}` + (sessions[sessionId] ? `,(roundTime: ${sessions[sessionId].roundTime} seconds, pauseTime: ${sessions[sessionId].pauseTime} seconds) with User-Agent Data:${userAgentData}` : ``));
 
     // Session-Daten initialisieren, falls noch nicht vorhanden
     if (!sessions[sessionId]) {
@@ -233,6 +246,7 @@ io.on('connection', (socket) => {
 
     // Speichere den Benutzernamen für diese Session
     sessions[sessionId].users[socket.id] = username;
+
     // Überprüfe, ob der Benutzer bereits in den combatants ist, wenn nicht, füge ihn hinzu
     if (!Object.values(sessions[sessionId].combatants).includes(username)) {
         const newCombatantId = Object.keys(sessions[sessionId].combatants).length + 1;
@@ -242,6 +256,7 @@ io.on('connection', (socket) => {
     // Initial matches berechnen
     let currentMatches = roundRobinPairing(sessions[sessionId].combatants, sessions[sessionId].round, username);
     console.log(` -> ${username} joined combatants: ${JSON.stringify(sessions[sessionId].combatants)}`)
+
     // Sende die aktualisierten Daten an alle Clients in der Session
     io.to(sessionId).emit('initialData', {
         roundTime: sessions[sessionId].roundTime,
@@ -252,57 +267,57 @@ io.on('connection', (socket) => {
         pauseTime: sessions[sessionId].pauseTime,
     });
 
-
     socket.on('startTimer', () => {
         console.log(`Received startTimer event from session ${sessionId} from user ${username}`);
         if (!sessions[sessionId].timerInterval) {
             sessions[sessionId].timerInterval = setInterval(() => updateTime(sessionId), 1000);
         }
         io.to(sessionId).emit('timerStarted', username);
-
         isTimerRunning = true;
-
         io.to(sessionId).emit('timerStatus', isTimerRunning)
     });
 
     socket.on('stopTimer', () => {
         console.log(`Received stopTimer event from session ${sessionId} from user ${username}`);
         if (sessions[sessionId].timerInterval) {
-            clearInterval(sessions[sessionId].timerInterval);
-            sessions[sessionId].timerInterval = null;
-            io.to(sessionId).emit('timerStopped', username);
-
-            isTimerRunning = false;
-
-            io.to(sessionId).emit('timerStatus', isTimerRunning)
+            stopTimer(sessionId);
         }
     });
 
-
-
     socket.on('updateConfig', (data) => {
         const { sessionId, roundTime, pauseTime, combatants } = data;
-
         console.log(`Received updateConfig event from session ${sessionId} with data:`, data);
-
         if (sessions[sessionId]) {
             sessions[sessionId].config = {
                 roundTime: roundTime,
                 pauseTime: pauseTime,
                 combatants: JSON.parse(combatants)
             };
-
             sessions[sessionId].roundTime = parseInt(roundTime);
             sessions[sessionId].pauseTime = parseInt(pauseTime);
             sessions[sessionId].combatants = JSON.parse(combatants);
-
             saveConfig(sessionId, sessions[sessionId].config);
             io.to(sessionId).emit('configUpdated', sessions[sessionId].config);
         } else {
             console.error(`Session ${sessionId} not found`);
         }
     });
+
+    socket.on('disconnect', () => {
+        console.log(`User ${username} disconnected from session ${sessionId}`);
+        if (sessions[sessionId] && sessions[sessionId].users[socket.id]) {
+            delete sessions[sessionId].users[socket.id];
+            console.log(`Remaining users in session ${sessionId}:`, sessions[sessionId].users);
+
+            // Wenn keine Benutzer mehr in der Session sind, stoppe den Timer
+            if (Object.keys(sessions[sessionId].users).length === 0) {
+                console.log(`No users left in session ${sessionId}, stopping timer.`);
+                stopTimer(sessionId);
+            }
+        }
+    });
 });
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);

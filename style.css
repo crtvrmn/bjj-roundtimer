@@ -1,7 +1,7 @@
 body {
     font-family: sans-serif;
     text-align: center;
-    background-color: #3498db;
+    background-color: #2c4852;
     color: white; /* Textfarbe auf Weiß geändert */
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Outline-Effekt */
     max-width: 800px;
@@ -9,7 +9,7 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 90vh;
     justify-content: flex-start;
 }
 #time {
@@ -32,17 +32,18 @@ body {
     color: #99a6b2; /* Gräulichere Farbe */
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Outline-Effekt */
     margin-bottom: 10%;
-}
 
+}
 
 #start,
 #stop,
+#reset,
 #submit,
 #submit_config,
 #logout {
     font-size: 2em;
     padding: 15px 30px;
-    margin: 5px;
+    margin: auto 5px;
     border: none;
     border-radius: 10px;
     cursor: pointer;
@@ -50,6 +51,8 @@ body {
     margin-bottom: 10px;
     text-transform: uppercase; /* Text in Großbuchstaben */
 }
+
+
 #start {
     background-color: #2ecc71;
     color: white;
@@ -63,14 +66,52 @@ body {
     background-color: #e74c3c;
     color: white;
 }
+.round-running #pause::before {
+    content: "COMBAT";
+    position: absolute;
+    top: 50%;
+    left: 25%;
+    transform: translate(-50%, -50%) rotate(-90deg); /* Zentrieren und drehen */
+    font-size: 10em; /* Größe des Wasserzeichens anpassen */
+    color:  #2baf62; /* Farbe und Transparenz anpassen */
+    z-index: -1; /* Hinter den Inhalt legen */
+    pointer-events: none; /* Verhindert, dass das Wasserzeichen klickbar ist */
+    }
 .round-running {
     background-color: #27ae60;
 }
+
+.pause-running #pause::before {
+    content: "PAUSE";
+    position: absolute;
+    top: 50%;
+    left: 25%;
+    transform: translate(-50%, -50%) rotate(-90deg); /* Zentrieren und drehen */
+    font-size: 10em; /* Größe des Wasserzeichens anpassen */
+    color:  #318cc9; /* Farbe und Transparenz anpassen */
+    z-index: -1; /* Hinter den Inhalt legen */
+    pointer-events: none; /* Verhindert, dass das Wasserzeichen klickbar ist */
+    }
 .pause-running {
     background-color: #3498db;
+
+
 }
+
+.paused #pause::before {
+content: "=";
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%) rotate(90deg); /* Zentrieren und drehen */
+font-size: 20em; /* Größe des Wasserzeichens anpassen */
+color:  #375962; /* Farbe und Transparenz anpassen */
+z-index: -1; /* Hinter den Inhalt legen */
+pointer-events: none; /* Verhindert, dass das Wasserzeichen klickbar ist */
+}
+
 .paused {
-    background-color: #f39c12;
+    background-color: #2c4852;
 }
 .hidden {
     display: none;
